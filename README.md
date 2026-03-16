@@ -6,6 +6,9 @@ This repository contains three independent deliverables that build on one anothe
 2. `small-ec2-app`: AMI baking + runtime configuration and scalable EC2 application deployment.
 3. `deploying-an-application`: Kubernetes Helm deployment assets and a GitHub Actions OIDC-based deployment workflow.
 
+Actual Time Spent: Approximately 5 hours
+
+
 
 ## Repository Structure
 
