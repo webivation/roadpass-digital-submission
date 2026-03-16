@@ -1,0 +1,85 @@
+---
+# Fry role tasks – executed at EC2 instance launch time.
+# The fry-bootstrap.sh script (installed by the pack role) calls this playbook
+# with --extra-vars "@/tmp/fry-userdata.json" so that user-data key/value pairs
+# are available as Ansible variables here.
+
+# ---------------------------------------------------------------------------
+# 1. Read user-data from EC2 instance metadata (IMDSv2)
+# ---------------------------------------------------------------------------
+
+- name: Fetch EC2 user-data token via IMDSv2
+  ansible.builtin.uri:
+    url: "http://169.254.169.254/latest/api/token"
+    method: PUT
+    headers:
+      X-aws-ec2-metadata-token-ttl-seconds: "60"
+    return_content: true
+    status_code: [200]
+    timeout: 5
+  register: imds_token
+  ignore_errors: true
+  tags: [fry, userdata]
+
+- name: Fetch EC2 user-data via IMDSv2
+  ansible.builtin.uri:
+    url: "http://169.254.169.254/latest/user-data"
+    method: GET
+    headers:
+      X-aws-ec2-metadata-token: "{{ imds_token.content | default('') }}"
+    return_content: true
+    status_code: [200, 404]
+    timeout: 5
+  register: raw_userdata
+  ignore_errors: true
+  when: imds_token is succeeded
+  tags: [fry, userdata]
+
+- name: Parse user-data JSON
+  ansible.builtin.set_fact:
+    userdata: "{{ raw_userdata.content | from_json }}"
+  when:
+    - raw_userdata is defined
+    - raw_userdata.status == 200
+    - raw_userdata.content | length > 0
+  ignore_errors: true
+  tags: [fry, userdata]
+
+# ---------------------------------------------------------------------------
+# 2. Apply user-data variables (merge over defaults)
+# ---------------------------------------------------------------------------
+
+- name: Override defaults with user-data values
+  ansible.builtin.set_fact:
+    site_title:   "{{ userdata.site_title   | default(site_title) }}"
+    site_heading: "{{ userdata.site_heading | default(site_heading) }}"
+    site_body:    "{{ userdata.site_body    | default(site_body) }}"
+    environment:  "{{ userdata.environment  | default(environment) }}"
+    project:      "{{ userdata.project      | default(project) }}"
+  when: userdata is defined
+  tags: [fry, userdata]
+
+# ---------------------------------------------------------------------------
+# 3. Render the environment-specific index.html
+# ---------------------------------------------------------------------------
+
+- name: Render index.html with user-data variables
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ nginx_html_dir }}/index.html"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx
+  tags: [fry, nginx]
+
+# ---------------------------------------------------------------------------
+# 4. Ensure nginx is running
+# ---------------------------------------------------------------------------
+
+- name: Ensure nginx is started and enabled
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true
+  tags: [fry, nginx]

@@ -1,0 +1,23 @@
+---
+# Pack role defaults – variables used when baking the AMI.
+# These are overridden by Packer --extra-vars at build time.
+
+# Project / environment metadata embedded into the static page
+project:     "roadpass"
+environment: "staging"
+
+# Nginx configuration
+nginx_port:        80
+nginx_server_name: "_"
+nginx_html_dir:    "/usr/share/nginx/html"
+
+# Path where the fry playbook and its resources are staged on the AMI
+fry_base_dir:     "/opt/fry"
+fry_playbook:     "/opt/fry/playbooks/fry.yml"
+fry_roles_dir:    "/opt/fry/roles"
+fry_ansible_cfg:  "/opt/fry/ansible.cfg"
+
+# Static page content defaults (can be overridden at fry time)
+site_title:   "Roadpass EC2 App"
+site_heading: "Welcome to Roadpass"
+site_body:    "This nginx server was built with Packer and Ansible."

@@ -1,0 +1,82 @@
+# Default values for nginx-app.
+
+replicaCount: 2
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account (e.g. for IRSA)
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext:
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+ingress:
+  enabled: true
+  # Supported: nginx | alb
+  className: "nginx"
+  annotations: {}
+  # nginx ingress example annotations:
+  # nginx.ingress.kubernetes.io/rewrite-target: /
+  # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  #
+  # ALB ingress example annotations (use className: "alb" above):
+  # kubernetes.io/ingress.class: alb
+  # alb.ingress.kubernetes.io/scheme: internet-facing
+  # alb.ingress.kubernetes.io/target-type: ip
+  hosts:
+    - host: nginx-app.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # - secretName: nginx-app-tls
+  #   hosts:
+  #     - nginx-app.example.com
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Additional environment variables for the nginx container
+env: []
+# - name: MY_VAR
+#   value: "my-value"

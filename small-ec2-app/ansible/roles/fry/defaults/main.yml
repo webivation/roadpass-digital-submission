@@ -1,0 +1,12 @@
+---
+# Fry role defaults – overridden by user-data variables at EC2 launch time.
+# These match the defaults staged by the pack role and can be replaced via
+# the launch template user-data JSON payload.
+
+environment:  "staging"
+project:      "roadpass"
+site_title:   "Roadpass EC2 App"
+site_heading: "Welcome to Roadpass"
+site_body:    "This nginx server was built with Packer and Ansible."
+
+nginx_html_dir: "/usr/share/nginx/html"

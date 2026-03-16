@@ -1,0 +1,13 @@
+---
+# Fry playbook – runs at EC2 instance launch time.
+# Called by the user-data bootstrap script; reads instance metadata /
+# user-data variables and applies environment-specific configuration to nginx.
+
+- name: Fry – apply runtime configuration from EC2 user-data
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: fry

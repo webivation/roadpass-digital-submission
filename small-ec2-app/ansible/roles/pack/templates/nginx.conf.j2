@@ -1,0 +1,18 @@
+server {
+    listen {{ nginx_port }} default_server;
+    server_name {{ nginx_server_name }};
+
+    root {{ nginx_html_dir }};
+    index index.html;
+
+    # Health-check endpoint for the ALB target group
+    location /health {
+        access_log off;
+        return 200 "OK\n";
+        add_header Content-Type text/plain;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

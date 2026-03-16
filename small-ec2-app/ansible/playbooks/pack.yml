@@ -1,0 +1,16 @@
+---
+# Pack playbook – runs at AMI bake time via Packer.
+# Installs and configures nginx with a static page, installs Ansible for the
+# fry role to run at launch time, and stages the fry playbook on disk.
+
+- name: Pack – bake nginx into Amazon Linux 2023 AMI
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    environment: "staging"
+    project: "roadpass"
+
+  roles:
+    - role: pack

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# fry-bootstrap.sh – runs at EC2 instance launch via the fry.service systemd unit.
+# Fetches user-data (JSON), writes it to a temp file, then runs the fry playbook.
+set -euo pipefail
+
+LOG_TAG="fry-bootstrap"
+FRY_PLAYBOOK="{{ fry_playbook }}"
+FRY_CFG="{{ fry_ansible_cfg }}"
+USERDATA_FILE="/tmp/fry-userdata.json"
+
+log() { logger -t "$LOG_TAG" "$*"; echo "[$(date -Iseconds)] $LOG_TAG: $*"; }
+
+log "Starting fry bootstrap..."
+
+# ── Fetch user-data via IMDSv2 ────────────────────────────────────────────────
+log "Fetching EC2 user-data via IMDSv2..."
+TOKEN=$(curl -sf -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 60" || true)
+
+if [[ -n "$TOKEN" ]]; then
+  USER_DATA=$(curl -sf \
+    -H "X-aws-ec2-metadata-token: $TOKEN" \
+    "http://169.254.169.254/latest/user-data" 2>/dev/null || echo "{}")
+else
+  log "WARNING: Could not obtain IMDSv2 token – using empty user-data"
+  USER_DATA="{}"
+fi
+
+USER_DATA_LEN=${#USER_DATA}
+USER_DATA_HASH=$(printf '%s' "$USER_DATA" | sha256sum | awk '{print $1}')
+log "User-data fetched (length=${USER_DATA_LEN} bytes, sha256=${USER_DATA_HASH})"
+echo "$USER_DATA" > "$USERDATA_FILE"
+
+# ── Validate JSON ─────────────────────────────────────────────────────────────
+if ! jq empty "$USERDATA_FILE" 2>/dev/null; then
+  log "WARNING: user-data is not valid JSON – using empty object"
+  echo "{}" > "$USERDATA_FILE"
+fi
+
+# ── Run fry playbook ──────────────────────────────────────────────────────────
+log "Running fry playbook: $FRY_PLAYBOOK"
+ANSIBLE_CONFIG="$FRY_CFG" ansible-playbook "$FRY_PLAYBOOK" \
+  --extra-vars "@$USERDATA_FILE" \
+  --connection=local \
+  -i "localhost," \
+  2>&1 | logger -t "$LOG_TAG"
+
+log "Fry bootstrap completed successfully."
